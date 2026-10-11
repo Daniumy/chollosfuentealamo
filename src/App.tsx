@@ -4,6 +4,7 @@ import { chollos } from './chollos';
 import './App.css';
 
 export default function App() {
+  const x = 1;
   return (
     <>
       {runtimeConfig.SHOW_ENV_BANNER && (
