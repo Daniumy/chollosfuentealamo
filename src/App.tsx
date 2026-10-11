@@ -13,7 +13,7 @@ export default function App() {
       )}
 
       <main>
-        <h1>Chollos Fuente Álamo</h1>
+        <h1>Chollos Fuente Álamo 🔥🔥🔥🔥🔥🔥</h1>
         <ul className="chollos">
           {chollos.map((c) => (
             <li key={c.id}>
