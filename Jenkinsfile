@@ -15,10 +15,16 @@ pipeline {
     stage('Preparar') {
       steps {
         script {
-          // El tag de la imagen = los 7 primeros caracteres del commit
           env.TAG = sh(script: 'git rev-parse --short=7 HEAD', returnStdout: true).trim()
+          if (env.BRANCH_NAME == 'main') {
+            env.TARGET = 'prod'
+          } else if (env.BRANCH_NAME == 'develop') {
+            env.TARGET = 'dev'
+          } else {
+            env.TARGET = 'none'   // otras ramas: solo CI (lint + build), sin deploy
+          }
         }
-        echo "Rama ${env.BRANCH_NAME}, commit ${env.TAG}"
+        echo "Rama ${env.BRANCH_NAME}, commit ${env.TAG}, entorno ${env.TARGET}"
       }
     }
 
@@ -40,14 +46,14 @@ pipeline {
     }
 
     stage('Push imagen') {
-      when { branch 'main' }
+      when { anyOf { branch 'main'; branch 'develop' } }
       steps {
         sh 'docker push $IMAGE:$TAG'
       }
     }
 
-    stage('Deploy prod (GitOps)') {
-      when { branch 'main' }
+    stage('Deploy (GitOps)') {
+      when { anyOf { branch 'main'; branch 'develop' } }
       steps {
         withCredentials([usernamePassword(credentialsId: 'github-gitops',
                                           usernameVariable: 'GH_USER',
@@ -56,10 +62,10 @@ pipeline {
             rm -rf gitops
             git clone "https://$GH_USER:$GH_TOKEN@$GITOPS_REPO" gitops
             cd gitops
-            sed -i "s|newTag: .*|newTag: $TAG|" app/overlays/prod/kustomization.yaml
+            sed -i "s|newTag: .*|newTag: $TAG|" app/overlays/$TARGET/kustomization.yaml
             git config user.name "Jenkins"
             git config user.email "jenkins@chollosfuentealamo.com"
-            git diff --quiet || { git commit -am "deploy(prod): web $TAG" && git push origin main; }
+            git diff --quiet || { git commit -am "deploy($TARGET): web $TAG" && git push origin main; }
           '''
         }
       }
